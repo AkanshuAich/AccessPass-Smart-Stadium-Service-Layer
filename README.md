@@ -69,7 +69,8 @@ Visit **http://localhost:5173** — use the demo login buttons or scan a QR code
 | 🔐 **QR Scan-to-Activate** | Scan ticket QR or use demo login — no signup/password |
 | 🏪 **Live Stall Listing** | All stadium stalls with real-time queue lengths |
 | 🎨 **Color-Coded Wait Times** | 🟢 Fast (≤5 min) · 🟡 Moderate (5-15 min) · 🔴 Crowded (>15 min) |
-| 🧠 **AI Suggestions** | Gemini-powered recommendations for best stall & timing |
+| 🗺️ **Stadium Crowd Map** | Interactive SVG map showing crowd density at every gate |
+| 🧠 **AI Suggestions** | Resilient Gemini-powered recommendations with timeout fallbacks |
 | 🎫 **Digital Queue** | Join queue, get token number, track order status |
 | 🏪 **Vendor Portal** | Dedicated portal for stall owners to manage their shifting queues |
 | ⚖️ **Order Moderation** | Incoming orders must be Accepted or Rejected by vendors |
@@ -140,7 +141,8 @@ AI Service (Google Gemini API — optional)
 | `POST` | `/orders` | Customer: place order / join queue |
 | `GET` | `/orders` | Customer: list user's orders |
 | `PATCH` | `/orders/{id}/cancel` | Customer: cancel active order |
-| `GET` | `/suggestions` | AI stall recommendations |
+| `GET` | `/suggestions` | Legacy AI suggestions |
+| `GET` | `/ai/smart-suggestions` | Enhanced AI suggestions (Fast + Resilient) |
 | `WS` | `/ws` | Real-time bi-directional updates |
 
 ---
@@ -159,7 +161,11 @@ The AI analyzes current stall data and provides:
 - **Best timing**: When to go based on rush patterns
 - **Pro tip**: Actionable recommendation
 
-Falls back to rule-based suggestions if no API key is set.
+### 🚀 Performance & Resilience
+- **Pre-warmed**: Initialized at startup to eliminate cold-start lag.
+- **Async Timeout**: Automatic fallback to rule-based logic if AI takes >5s.
+- **TTL Caching**: Response caching to handle high traffic efficiently.
+- **Optimized Prompts**: Slimmed data transfer for sub-second reasoning.
 
 ---
 
@@ -168,7 +174,8 @@ Falls back to rule-based suggestions if no API key is set.
 1. **Open app** → "This is AccessPass, a smart stadium service layer"
 2. **Demo login** → "Users scan their ticket QR — instant login, no signup"
 3. **Stall listing** → "All stalls with live wait times — green means fast"
-4. **AI suggestion** → "Gemini AI recommends the best stall and timing"
+4. **Crowd Map** → "A top-down interactive map shows crowd density at every stand"
+5. **AI suggestion** → "Gemini AI recommends the best stall and timing"
 5. **Join queue** → "Select items, join the digital queue — get a token"
 6. **Order tracking** → "Real-time status: queued → preparing → ready"
 7. **Rush detection** → "The system predicts halftime rushes automatically"
