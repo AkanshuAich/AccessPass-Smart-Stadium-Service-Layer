@@ -8,6 +8,7 @@ backend/*.db-journal
 # Environments
 .env
 frontend/.env
+frontend/.env.production
 backend/.env
 
 # Node
