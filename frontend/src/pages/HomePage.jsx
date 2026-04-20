@@ -5,6 +5,7 @@ import client from '../api/client';
 import Layout from '../components/Layout';
 import StallCard from '../components/StallCard';
 import AiSuggestion from '../components/AiSuggestion';
+import CrowdMap from '../components/CrowdMap';
 import { SkeletonStall, SkeletonCategory } from '../components/Skeleton';
 
 const categories = ['all', 'food', 'beverage', 'snacks', 'dessert'];
@@ -30,6 +31,7 @@ export default function HomePage() {
   const [sugLoading, setSugLoading] = useState(true);
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(stalls.length === 0);
+  const [showMap, setShowMap] = useState(true);
 
   const fetchStalls = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -55,14 +57,21 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchStalls]);
 
-  // Fetch AI suggestion
+  // Fetch AI suggestion — use enhanced /ai/smart-suggestions endpoint with fallback
   useEffect(() => {
     const fetchSuggestion = async () => {
       try {
-        const res = await client.get(`/suggestions?section=${user?.section || 'A'}`);
+        // Try the new smart endpoint first (Gemini + 2s timeout + fallback)
+        const res = await client.get(`/ai/smart-suggestions?section=${user?.section || 'A'}`);
         setSuggestion(res.data);
-      } catch (err) {
-        console.error('Failed to fetch suggestion:', err);
+      } catch {
+        try {
+          // Fall back to existing /suggestions if new endpoint fails
+          const res = await client.get(`/suggestions?section=${user?.section || 'A'}`);
+          setSuggestion(res.data);
+        } catch (err) {
+          console.error('All suggestion endpoints failed:', err);
+        }
       } finally {
         setSugLoading(false);
       }
@@ -176,6 +185,27 @@ export default function HomePage() {
             ))
           )}
         </div>
+
+        {/* Crowd Map toggle */}
+        {stalls.length > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => setShowMap(v => !v)}
+              className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors mb-3 group"
+            >
+              <span className="w-7 h-7 rounded-lg bg-white/5 group-hover:bg-white/10 flex items-center justify-center transition-colors">🗺️</span>
+              <span>{showMap ? 'Hide' : 'Show'} Crowd Map</span>
+              <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${showMap ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showMap && (
+              <div className="animate-fade-in">
+                <CrowdMap stalls={stalls} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats footer */}
         <div className="mt-8 glass-card p-4 animate-fade-in">

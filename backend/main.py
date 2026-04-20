@@ -9,6 +9,7 @@ from auth.routes import router as auth_router
 from stalls.routes import router as stalls_router
 from orders.routes import router as orders_router
 from ai.gemini_service import get_stall_suggestions
+from ai.recommendation_service import get_smart_suggestions, prewarm_gemini
 from websocket.manager import manager
 from simulation.engine import run_simulation, stop_simulation
 from stalls.models import Stall, MenuItem
@@ -168,6 +169,9 @@ async def lifespan(app: FastAPI):
     sim_task = asyncio.create_task(run_simulation())
     print("🚀 AccessPass backend started — simulation running")
 
+    # 🔥 Pre-warm Gemini in background (eliminates first-call cold start)
+    prewarm_gemini()
+
     yield
 
     stop_simulation()
@@ -220,6 +224,33 @@ def suggestions(section: str = "A"):
                 "rush_status": "🔥 Rush" if active > 8 else None,
             })
         return get_stall_suggestions(stalls_data, section)
+    finally:
+        db.close()
+
+
+@app.get("/ai/smart-suggestions", tags=["AI"])
+async def smart_suggestions(section: str = "A"):
+    """Enhanced AI-powered stall recommendations with timeout and fallback."""
+    db = SessionLocal()
+    try:
+        stalls = db.query(Stall).filter(Stall.is_open == True).all()
+        stalls_data = []
+        for s in stalls:
+            active = (
+                db.query(Order)
+                .filter(Order.stall_id == s.id, Order.status.in_(["queued", "preparing"]))
+                .count()
+            )
+            stalls_data.append({
+                "id": s.id,
+                "name": s.name,
+                "category": s.category,
+                "location": s.location,
+                "wait_time": active * s.avg_service_time,
+                "active_orders": active,
+                "rush_status": "🔥 Rush" if active > 8 else None,
+            })
+        return await get_smart_suggestions(stalls_data, section)
     finally:
         db.close()
 
